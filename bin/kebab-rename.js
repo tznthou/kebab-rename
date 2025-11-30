@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { scanDirectory, executeRename, formatPreview } from '../src/index.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json');
 
 program
   .name('kebab-rename')
   .description('一鍵把檔名轉成 kebab-case')
-  .version('1.0.0')
+  .version(version)
   .argument('[directory]', '目標目錄', '.')
   .option('-r, --recursive', '遞迴處理子目錄')
   .option('-y, --yes', '直接執行（不需確認）')
@@ -18,7 +22,11 @@ program
 
     // 解析副檔名選項
     const extensions = options.ext
-      ? options.ext.split(',').map((e) => (e.startsWith('.') ? e.toLowerCase() : `.${e.toLowerCase()}`))
+      ? options.ext
+          .split(',')
+          .map((e) => e.trim())
+          .filter(Boolean)
+          .map((e) => (e.startsWith('.') ? e.toLowerCase() : `.${e.toLowerCase()}`))
       : [];
 
     // 掃描目錄
@@ -37,7 +45,20 @@ program
     }
 
     // 判斷是否執行
-    if (options.yes) {
+    if (options.dryRun) {
+      const dryRunMessage = options.yes
+        ? '⚠️ 已啟用 dry-run，已忽略 --yes 參數並未進行重新命名。'
+        : '💡 已啟用 dry-run，未進行重新命名。';
+
+      console.log(dryRunMessage);
+      console.log('   範例: kebab-rename --yes');
+      console.log('   範例: kebab-rename ./my-folder -r -y\n');
+    } else if (!options.yes) {
+      // 提示使用者
+      console.log('💡 這是預覽模式。加上 --yes 或 -y 來實際執行重新命名。');
+      console.log('   範例: kebab-rename --yes');
+      console.log('   範例: kebab-rename ./my-folder -r -y\n');
+    } else {
       // 直接執行
       console.log('🚀 執行重新命名...\n');
       const result = executeRename(renameList);
@@ -49,11 +70,6 @@ program
         console.log(`❌ 失敗 ${result.failed} 個項目:`);
         result.errors.forEach((err) => console.log(`   ${err}`));
       }
-    } else {
-      // 提示使用者
-      console.log('💡 這是預覽模式。加上 --yes 或 -y 來實際執行重新命名。');
-      console.log('   範例: kebab-rename --yes');
-      console.log('   範例: kebab-rename ./my-folder -r -y\n');
     }
   });
 
