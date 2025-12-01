@@ -66,9 +66,10 @@ export function needsConversion(filename, style = 'kebab') {
  * 處理檔名衝突，加上數字後綴
  * @param {string} filename - 目標檔名
  * @param {Set<string>} existingNames - 已存在的檔名集合
+ * @param {string} style - 目標命名風格（kebab 或 camel）
  * @returns {string} 不衝突的檔名
  */
-export function resolveConflict(filename, existingNames) {
+export function resolveConflict(filename, existingNames, style = 'kebab') {
   if (!existingNames.has(filename)) {
     return filename;
   }
@@ -80,7 +81,8 @@ export function resolveConflict(filename, existingNames) {
   let newName;
 
   do {
-    newName = `${name}-${counter}${ext}`;
+    // camelCase: myFile1.txt, kebab-case: my-file-1.txt
+    newName = style === 'camel' ? `${name}${counter}${ext}` : `${name}-${counter}${ext}`;
     counter++;
   } while (existingNames.has(newName));
 

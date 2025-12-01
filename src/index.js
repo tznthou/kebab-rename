@@ -61,7 +61,7 @@ export function scanDirectory(targetDir, options = {}) {
 
         // 目錄本身也可以重新命名
         if (needsConversion(entry.name, style)) {
-          const newName = resolveConflict(convertFilename(entry.name, style), dirNames);
+          const newName = resolveConflict(convertFilename(entry.name, style), dirNames, style);
           const newPath = path.join(dir, newName);
           results.push({
             oldPath: fullPath,
@@ -89,7 +89,7 @@ export function scanDirectory(targetDir, options = {}) {
 
         // 檢查是否需要轉換
         if (needsConversion(entry.name, style)) {
-          const newName = resolveConflict(convertFilename(entry.name, style), dirNames);
+          const newName = resolveConflict(convertFilename(entry.name, style), dirNames, style);
           const newPath = path.join(dir, newName);
           results.push({
             oldPath: fullPath,
