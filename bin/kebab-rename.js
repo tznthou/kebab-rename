@@ -10,15 +10,23 @@ const { version } = require('../package.json');
 
 program
   .name('kebab-rename')
-  .description('一鍵把檔名轉成 kebab-case')
+  .description('一鍵把檔名轉成 kebab-case 或 camelCase')
   .version(version)
   .argument('[directory]', '目標目錄', '.')
   .option('-r, --recursive', '遞迴處理子目錄')
   .option('-y, --yes', '直接執行（不需確認）')
   .option('-d, --dry-run', '只預覽，不實際執行（預設行為）')
   .option('-e, --ext <extensions>', '只處理特定副檔名，逗號分隔（如: .jpg,.png）')
+  .option('-s, --style <style>', '目標命名風格（kebab 或 camel）', 'kebab')
   .action((directory, options) => {
     const targetDir = path.resolve(directory);
+    const style = options.style.toLowerCase();
+
+    if (!['kebab', 'camel'].includes(style)) {
+      console.error(`\n❌ 不支援的命名風格: ${options.style}`);
+      console.error('   請使用 kebab 或 camel。\n');
+      process.exit(1);
+    }
 
     // 解析副檔名選項
     const extensions = options.ext
@@ -34,10 +42,11 @@ program
     const renameList = scanDirectory(targetDir, {
       recursive: options.recursive,
       extensions,
+      style,
     });
 
     // 顯示預覽
-    console.log(formatPreview(renameList, targetDir));
+    console.log(formatPreview(renameList, targetDir, style));
 
     // 如果沒有需要重新命名的檔案，直接結束
     if (renameList.length === 0) {

@@ -34,6 +34,31 @@ describe('kebab-rename CLI', () => {
     });
   });
 
+  it('converts file names to camelCase when style is set', () => {
+    withTempDir((dir) => {
+      const sourceFile = path.join(dir, 'My sample_file.TXT');
+      fs.writeFileSync(sourceFile, 'demo');
+
+      const output = execFileSync('node', [binPath, dir, '--style', 'camel'], { encoding: 'utf8' });
+
+      assert.ok(output.includes('mySampleFile.txt'));
+    });
+  });
+
+  it('shows error for unsupported style', () => {
+    withTempDir((dir) => {
+      try {
+        execFileSync('node', [binPath, dir, '--style', 'pascal'], {
+          encoding: 'utf8',
+          stderr: 'pipe',
+        });
+        assert.fail('Expected command to exit with error');
+      } catch (error) {
+        assert.ok(error.message.includes('不支援的命名風格'));
+      }
+    });
+  });
+
   it('trims whitespace when parsing extension filters', () => {
     withTempDir((dir) => {
       const jpgFile = path.join(dir, 'My Image.JPG');
