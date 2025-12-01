@@ -1,57 +1,64 @@
 import path from 'node:path';
 
-/**
- * 將檔名轉換成 kebab-case
- * @param {string} filename - 原始檔名（含副檔名）
- * @returns {string} kebab-case 檔名
- */
+const SUPPORTED_STYLES = new Set(['kebab', 'camel']);
+
+function splitIntoTokens(name) {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/_/g, ' ')
+    .replace(/\./g, ' ')
+    .replace(/[^a-zA-Z0-9\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function tokensToStyle(tokens, style) {
+  if (tokens.length === 0) {
+    return 'unnamed';
+  }
+
+  if (style === 'camel') {
+    return tokens
+      .map((token, index) => (index === 0 ? token : token.charAt(0).toUpperCase() + token.slice(1)))
+      .join('');
+  }
+
+  // 預設 kebab-case
+  return tokens.join('-');
+}
+
 export function toKebabCase(filename) {
-  // 分離檔名和副檔名
+  return convertFilename(filename, 'kebab');
+}
+
+export function toCamelCase(filename) {
+  return convertFilename(filename, 'camel');
+}
+
+export function convertFilename(filename, style = 'kebab') {
   const ext = path.extname(filename);
   const name = path.basename(filename, ext);
 
-  // 如果檔名為空，直接返回
-  if (!name) return filename;
+  if (!name || !SUPPORTED_STYLES.has(style)) return filename;
 
-  let kebab = name
-    // CamelCase 拆分：MyFileName → My File Name
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    // 連續大寫後接小寫：XMLParser → XML Parser
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
-    // 底線轉空格
-    .replace(/_/g, ' ')
-    // 點轉空格（但不是副檔名的點）
-    .replace(/\./g, ' ')
-    // 移除特殊符號，保留字母、數字、空格、中日韓文字
-    .replace(/[^a-zA-Z0-9\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]/g, ' ')
-    // 多個空格合併
-    .replace(/\s+/g, ' ')
-    // 去頭尾空格
-    .trim()
-    // 空格轉連字號
-    .replace(/\s/g, '-')
-    // 轉小寫
-    .toLowerCase()
-    // 清理可能的連續連字號
-    .replace(/-+/g, '-')
-    // 清理開頭結尾的連字號
-    .replace(/^-|-$/g, '');
+  const tokens = splitIntoTokens(name);
+  const converted = tokensToStyle(tokens, style);
 
-  // 如果轉換後為空，保留原名（可能是純符號檔名）
-  if (!kebab) {
-    kebab = 'unnamed';
-  }
-
-  return kebab + ext.toLowerCase();
+  return converted + ext.toLowerCase();
 }
 
 /**
  * 檢查檔名是否需要轉換
  * @param {string} filename - 原始檔名
+ * @param {string} style - 目標命名風格
  * @returns {boolean} 是否需要轉換
  */
-export function needsConversion(filename) {
-  const converted = toKebabCase(filename);
+export function needsConversion(filename, style = 'kebab') {
+  const converted = convertFilename(filename, style);
   return converted !== filename;
 }
 

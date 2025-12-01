@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { toKebabCase, needsConversion, resolveConflict } from './converter.js';
+import { convertFilename, needsConversion, resolveConflict } from './converter.js';
 
 // 預設忽略的目錄
 const IGNORED_DIRS = new Set([
@@ -22,10 +22,11 @@ const IGNORED_DIRS = new Set([
  * @param {Object} options - 選項
  * @param {boolean} options.recursive - 是否遞迴
  * @param {string[]} options.extensions - 只處理特定副檔名
+ * @param {string} options.style - 目標命名風格（kebab 或 camel）
  * @returns {Array<{oldPath: string, newPath: string, oldName: string, newName: string}>}
  */
 export function scanDirectory(targetDir, options = {}) {
-  const { recursive = false, extensions = [] } = options;
+  const { recursive = false, extensions = [], style = 'kebab' } = options;
   const results = [];
   const existingNames = new Map(); // dir -> Set of names
 
@@ -59,8 +60,8 @@ export function scanDirectory(targetDir, options = {}) {
         }
 
         // 目錄本身也可以重新命名
-        if (needsConversion(entry.name)) {
-          const newName = resolveConflict(toKebabCase(entry.name), dirNames);
+        if (needsConversion(entry.name, style)) {
+          const newName = resolveConflict(convertFilename(entry.name, style), dirNames);
           const newPath = path.join(dir, newName);
           results.push({
             oldPath: fullPath,
@@ -87,8 +88,8 @@ export function scanDirectory(targetDir, options = {}) {
         }
 
         // 檢查是否需要轉換
-        if (needsConversion(entry.name)) {
-          const newName = resolveConflict(toKebabCase(entry.name), dirNames);
+        if (needsConversion(entry.name, style)) {
+          const newName = resolveConflict(convertFilename(entry.name, style), dirNames);
           const newPath = path.join(dir, newName);
           results.push({
             oldPath: fullPath,
@@ -142,9 +143,10 @@ export function executeRename(renameList) {
 /**
  * 格式化輸出
  */
-export function formatPreview(renameList, targetDir) {
+export function formatPreview(renameList, targetDir, style = 'kebab') {
   if (renameList.length === 0) {
-    return `\n📁 ${targetDir}\n\n  ✓ 所有檔名都已經是 kebab-case，不需要變更。\n`;
+    const styleLabel = style === 'camel' ? 'camelCase' : 'kebab-case';
+    return `\n📁 ${targetDir}\n\n  ✓ 所有檔名都已經是 ${styleLabel}，不需要變更。\n`;
   }
 
   let output = `\n📁 ${targetDir}\n\n`;

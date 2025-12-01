@@ -1,6 +1,6 @@
 # kebab-rename
 
-> 一鍵把檔名轉成 kebab-case 🍢
+> 一鍵把檔名轉成 kebab-case 🍢，現在也支援 camelCase 🐫
 
 [← 回到 Muripo HQ](https://tznthou.github.io/muripo-hq/)
 
@@ -42,6 +42,7 @@ my-file-name
 ## 功能特色
 
 - 🔄 **智慧轉換**：自動處理 CamelCase、snake_case、空格、特殊符號
+- 🔀 **客製風格**：可選擇輸出 kebab-case 或 camelCase
 - 👀 **預覽優先**：預設只顯示會改什麼，不實際執行
 - 🛡️ **安全機制**：自動跳過 `.git`、`node_modules` 等敏感目錄
 - 🔢 **衝突處理**：檔名重複時自動加數字後綴
@@ -153,6 +154,7 @@ npx kebab-rename ./my-folder --ext .jpg,.png -y
 | `-y, --yes` | 實際執行重新命名（不加就是預覽模式） |
 | `-r, --recursive` | 遞迴處理子目錄 |
 | `-e, --ext <副檔名>` | 只處理特定副檔名，逗號分隔（如 `.jpg,.png`） |
+| `-s, --style <風格>` | 目標命名風格：`kebab`（預設）或 `camel` |
 | `-d, --dry-run` | 預覽模式（預設行為，可省略） |
 | `-h, --help` | 顯示說明 |
 | `-V, --version` | 顯示版本 |
