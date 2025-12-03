@@ -4,7 +4,8 @@
   "description": "一鍵把檔名轉成 kebab-case 或 camelCase",
   "main": "src/index.js",
   "bin": {
-    "kebab-rename": "./bin/kebab-rename.js"
+    "kebab-rename": "./bin/kebab-rename.js",
+    "kebab-rename-safe": "./bin/kebab-rename-safe"
   },
   "scripts": {
     "test": "node --test"

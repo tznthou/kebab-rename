@@ -20,3 +20,6 @@ build/
 # Claude Code
 .claude/
 CLAUDE.md
+
+# kebab-rename-safe history
+.kebab-rename-history/

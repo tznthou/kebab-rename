@@ -1,0 +1,412 @@
+#!/bin/bash
+#
+# kebab-rename-safe - Think Hard before renaming
+# 安全增強版的 kebab-rename wrapper
+#
+# 功能：
+#   - 詳細統計分析
+#   - 自動備份檔名對照表
+#   - 二次確認機制
+#   - 支援 undo 回滾
+#
+
+set -e
+
+# 顏色定義
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# 取得腳本所在目錄
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KEBAB_RENAME="$SCRIPT_DIR/kebab-rename.js"
+
+# 歷史記錄目錄
+HISTORY_DIR=".kebab-rename-history"
+
+# 顯示使用說明
+show_help() {
+    echo ""
+    echo -e "${CYAN}kebab-rename-safe${NC} - Think Hard before renaming"
+    echo ""
+    echo "用法："
+    echo "  kebab-rename-safe [目錄] [選項]"
+    echo ""
+    echo "選項："
+    echo "  -r, --recursive    遞迴處理子目錄"
+    echo "  -s, --style        命名風格 (kebab 或 camel)，預設 kebab"
+    echo "  -e, --ext          只處理特定副檔名，逗號分隔"
+    echo "  -f, --force        跳過確認直接執行（仍會備份）"
+    echo "  --undo             回滾上次操作"
+    echo "  --history          顯示操作歷史"
+    echo "  -h, --help         顯示此說明"
+    echo ""
+    echo "範例："
+    echo "  kebab-rename-safe ./src -r                    # 預覽並確認"
+    echo "  kebab-rename-safe ./src -r -s camel           # 使用 camelCase"
+    echo "  kebab-rename-safe ./src -r -f                 # 跳過確認"
+    echo "  kebab-rename-safe --undo                      # 回滾上次操作"
+    echo ""
+}
+
+# 顯示操作歷史
+show_history() {
+    if [[ ! -d "$HISTORY_DIR" ]]; then
+        echo -e "${YELLOW}尚無操作歷史${NC}"
+        return
+    fi
+
+    echo ""
+    echo -e "${CYAN}=== 操作歷史 ===${NC}"
+    echo ""
+
+    local count=0
+    for file in "$HISTORY_DIR"/*.json; do
+        [[ -e "$file" ]] || continue
+        count=$((count + 1))
+
+        local basename=$(basename "$file" .json)
+        local timestamp=$(echo "$basename" | sed 's/_/ /; s/-/:/3; s/-/:/3')
+        local items=$(grep -c '"oldPath"' "$file" 2>/dev/null || echo "0")
+        local style=$(grep -o '"style":"[^"]*"' "$file" | head -1 | cut -d'"' -f4)
+
+        echo -e "  ${GREEN}[$count]${NC} $timestamp"
+        echo -e "      風格: ${BLUE}$style${NC}, 項目數: ${YELLOW}$items${NC}"
+        echo ""
+    done
+
+    if [[ $count -eq 0 ]]; then
+        echo -e "${YELLOW}尚無操作歷史${NC}"
+    fi
+}
+
+# 執行 undo
+do_undo() {
+    if [[ ! -d "$HISTORY_DIR" ]]; then
+        echo -e "${RED}錯誤：找不到歷史記錄目錄${NC}"
+        exit 1
+    fi
+
+    # 找到最新的歷史檔案
+    local latest=$(ls -t "$HISTORY_DIR"/*.json 2>/dev/null | head -1)
+
+    if [[ -z "$latest" ]]; then
+        echo -e "${RED}錯誤：沒有可回滾的操作${NC}"
+        exit 1
+    fi
+
+    echo ""
+    echo -e "${CYAN}=== Think Hard: 回滾確認 ===${NC}"
+    echo ""
+    echo -e "準備回滾: ${YELLOW}$(basename "$latest")${NC}"
+    echo ""
+
+    # 解析並顯示將要回滾的項目
+    echo -e "${BLUE}將要還原的項目：${NC}"
+    echo ""
+
+    # 使用 node 解析 JSON（更可靠）
+    node -e "
+        const fs = require('fs');
+        const data = JSON.parse(fs.readFileSync('$latest', 'utf8'));
+
+        console.log('  風格: ' + data.style);
+        console.log('  目錄: ' + data.targetDir);
+        console.log('  項目數: ' + data.items.length);
+        console.log('');
+
+        data.items.slice(0, 10).forEach(item => {
+            const icon = item.isDirectory ? '📂' : '📄';
+            console.log('  ' + icon + ' ' + item.newName + '  →  ' + item.oldName);
+        });
+
+        if (data.items.length > 10) {
+            console.log('  ... 還有 ' + (data.items.length - 10) + ' 個項目');
+        }
+    "
+
+    echo ""
+    echo -e "${YELLOW}⚠️  確定要回滾嗎？此操作會將檔名還原為原始名稱。${NC}"
+    echo ""
+    read -p "輸入 'yes' 確認回滾: " confirm
+
+    if [[ "$confirm" != "yes" ]]; then
+        echo -e "${YELLOW}已取消回滾${NC}"
+        exit 0
+    fi
+
+    echo ""
+    echo -e "${BLUE}🔄 執行回滾...${NC}"
+    echo ""
+
+    # 執行回滾
+    local result=$(node -e "
+        const fs = require('fs');
+        const data = JSON.parse(fs.readFileSync('$latest', 'utf8'));
+
+        let success = 0;
+        let failed = 0;
+        const errors = [];
+
+        // 反向執行（因為原本是深度優先，回滾要淺層優先）
+        const items = data.items.reverse();
+
+        for (const item of items) {
+            try {
+                if (fs.existsSync(item.newPath)) {
+                    fs.renameSync(item.newPath, item.oldPath);
+                    success++;
+                } else {
+                    failed++;
+                    errors.push(item.newPath + ': 檔案不存在');
+                }
+            } catch (err) {
+                failed++;
+                errors.push(item.newPath + ': ' + err.message);
+            }
+        }
+
+        console.log(JSON.stringify({ success, failed, errors }));
+    ")
+
+    local success=$(echo "$result" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d.success)")
+    local failed=$(echo "$result" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d.failed)")
+
+    if [[ "$success" -gt 0 ]]; then
+        echo -e "${GREEN}✅ 成功還原 $success 個項目${NC}"
+    fi
+
+    if [[ "$failed" -gt 0 ]]; then
+        echo -e "${RED}❌ 失敗 $failed 個項目${NC}"
+    fi
+
+    # 刪除已使用的歷史檔案
+    rm "$latest"
+    echo ""
+    echo -e "${GREEN}回滾完成，歷史記錄已清除${NC}"
+}
+
+# 解析預覽輸出並顯示統計
+analyze_preview() {
+    local preview="$1"
+    local style="$2"
+
+    echo ""
+    echo -e "${CYAN}=== Think Hard: 詳細分析 ===${NC}"
+    echo ""
+
+    # 計算檔案和目錄數量
+    local dir_count=$(echo "$preview" | grep -c "📂" || echo "0")
+    local file_count=$(echo "$preview" | grep -c "📄" || echo "0")
+    local total=$((dir_count + file_count))
+
+    if [[ $total -eq 0 ]]; then
+        echo -e "${GREEN}✓ 所有檔名都已經是目標格式，不需要變更。${NC}"
+        return 1
+    fi
+
+    # 顯示統計
+    echo -e "${BLUE}📊 變更統計：${NC}"
+    echo -e "   目錄: ${YELLOW}$dir_count${NC} 個"
+    echo -e "   檔案: ${YELLOW}$file_count${NC} 個"
+    echo -e "   總計: ${YELLOW}$total${NC} 個項目"
+    echo ""
+
+    # 分析副檔名分佈
+    echo -e "${BLUE}📁 副檔名分佈：${NC}"
+    echo "$preview" | grep "📄" | grep -oE '\.[a-zA-Z0-9]+$' | sort | uniq -c | sort -rn | head -10 | while read count ext; do
+        echo -e "   $ext: ${YELLOW}$count${NC}"
+    done
+    echo ""
+
+    # 顯示命名風格
+    local style_label
+    if [[ "$style" == "camel" ]]; then
+        style_label="camelCase"
+    else
+        style_label="kebab-case"
+    fi
+    echo -e "${BLUE}🎨 目標風格：${NC} ${GREEN}$style_label${NC}"
+    echo ""
+
+    return 0
+}
+
+# 備份到歷史記錄（直接調用 scanDirectory 取得完整路徑）
+save_history() {
+    local target_dir="$1"
+    local style="$2"
+    local recursive="$3"
+    local extensions="$4"
+
+    mkdir -p "$HISTORY_DIR"
+
+    local timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
+    local history_file="$HISTORY_DIR/${timestamp}.json"
+
+    # 直接使用 scanDirectory 取得完整路徑資訊
+    node -e "
+        const { scanDirectory } = require('$SCRIPT_DIR/../src/index.js');
+        const fs = require('fs');
+
+        const targetDir = '$target_dir';
+        const style = '$style';
+        const recursive = '$recursive' === '-r';
+        const extStr = '$extensions'.replace('-e ', '').trim();
+        const extensions = extStr ? extStr.split(',').map(e => e.trim()).filter(Boolean).map(e => e.startsWith('.') ? e.toLowerCase() : '.' + e.toLowerCase()) : [];
+
+        const items = scanDirectory(targetDir, { recursive, extensions, style });
+
+        const result = {
+            timestamp: '$timestamp',
+            targetDir,
+            style,
+            items: items.map(item => ({
+                oldPath: item.oldPath,
+                newPath: item.newPath,
+                oldName: item.oldName,
+                newName: item.newName,
+                isDirectory: item.isDirectory
+            }))
+        };
+
+        fs.writeFileSync('$history_file', JSON.stringify(result, null, 2));
+    "
+
+    echo "$history_file"
+}
+
+# 主程式
+main() {
+    local target_dir="."
+    local recursive=""
+    local style="kebab"
+    local extensions=""
+    local force=false
+
+    # 解析參數
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            --undo)
+                do_undo
+                exit 0
+                ;;
+            --history)
+                show_history
+                exit 0
+                ;;
+            -r|--recursive)
+                recursive="-r"
+                shift
+                ;;
+            -s|--style)
+                style="$2"
+                shift 2
+                ;;
+            -e|--ext)
+                extensions="-e $2"
+                shift 2
+                ;;
+            -f|--force)
+                force=true
+                shift
+                ;;
+            -*)
+                echo -e "${RED}未知選項: $1${NC}"
+                show_help
+                exit 1
+                ;;
+            *)
+                target_dir="$1"
+                shift
+                ;;
+        esac
+    done
+
+    # 驗證 style
+    if [[ "$style" != "kebab" && "$style" != "camel" ]]; then
+        echo -e "${RED}錯誤：不支援的命名風格 '$style'${NC}"
+        echo "請使用 'kebab' 或 'camel'"
+        exit 1
+    fi
+
+    # 驗證目標目錄
+    if [[ ! -d "$target_dir" ]]; then
+        echo -e "${RED}錯誤：目錄不存在 '$target_dir'${NC}"
+        exit 1
+    fi
+
+    target_dir=$(cd "$target_dir" && pwd)
+
+    echo ""
+    echo -e "${CYAN}╔══════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║     🧠 Think Hard Before Rename      ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════╝${NC}"
+
+    # 執行 dry-run 取得預覽
+    echo ""
+    echo -e "${BLUE}🔍 掃描中...${NC}"
+
+    local preview
+    preview=$(node "$KEBAB_RENAME" "$target_dir" $recursive $extensions -s "$style" --dry-run 2>&1)
+
+    # 顯示原始預覽
+    echo "$preview" | grep -E "(📂|📄|→)" | head -20
+
+    local total_items=$(echo "$preview" | grep -cE "(📂|📄)" || echo "0")
+    if [[ $total_items -gt 20 ]]; then
+        echo -e "  ${YELLOW}... 還有 $((total_items - 20)) 個項目${NC}"
+    fi
+
+    # 分析並顯示統計
+    if ! analyze_preview "$preview" "$style"; then
+        exit 0
+    fi
+
+    # 備份歷史
+    echo -e "${BLUE}💾 建立備份記錄...${NC}"
+    local history_file
+    history_file=$(save_history "$target_dir" "$style" "$recursive" "$extensions")
+    echo -e "   已儲存至: ${GREEN}$history_file${NC}"
+    echo ""
+
+    # 確認執行
+    if [[ "$force" == true ]]; then
+        echo -e "${YELLOW}⚡ Force 模式：跳過確認${NC}"
+    else
+        echo -e "${YELLOW}⚠️  即將重新命名 $total_items 個項目${NC}"
+        echo ""
+        echo -e "輸入 ${GREEN}'yes'${NC} 確認執行，或按 Enter 取消："
+        read -p "> " confirm
+
+        if [[ "$confirm" != "yes" ]]; then
+            echo ""
+            echo -e "${YELLOW}已取消操作${NC}"
+            echo -e "提示：使用 ${CYAN}kebab-rename-safe --undo${NC} 可回滾上次操作"
+            # 刪除剛建立的歷史檔案（因為沒有執行）
+            rm -f "$history_file"
+            exit 0
+        fi
+    fi
+
+    # 執行重命名
+    echo ""
+    echo -e "${BLUE}🚀 執行重新命名...${NC}"
+    echo ""
+
+    node "$KEBAB_RENAME" "$target_dir" $recursive $extensions -s "$style" --yes
+
+    echo ""
+    echo -e "${GREEN}✅ 完成！${NC}"
+    echo -e "提示：使用 ${CYAN}kebab-rename-safe --undo${NC} 可回滾此操作"
+    echo ""
+}
+
+main "$@"
