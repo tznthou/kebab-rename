@@ -1,8 +1,8 @@
-# kebab-rename
+# Kebab Rename 一鍵把檔名轉成
 
 > 一鍵把檔名轉成 kebab-case 🍢，現在也支援 camelCase 🐫
 
-[← 回到 Muripo HQ](https://tznthou.github.io/muripo-hq/)
+[← 回到 Muripo HQ](https://tznthou.github.io/muripo-hq/) | [English](README_EN.md)
 
 ---
 
@@ -284,3 +284,9 @@ kebab-rename-safe --history
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## 作者
+
+子超 - [tznthou@gmail.com](mailto:tznthou@gmail.com)
