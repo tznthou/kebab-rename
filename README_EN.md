@@ -1,20 +1,20 @@
 # Kebab Rename
 
-> One-click file renaming to kebab-case, now with camelCase support too
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E.svg)](https://developer.mozilla.org/docs/Web/JavaScript)
 
-[<- Back to Muripo HQ](https://tznthou.github.io/muripo-hq/) | [中文](README.md)
+[← Back to Muripo HQ](https://tznthou.github.io/muripo-hq/) | [中文](README.md)
+
+One-click batch file renaming to kebab-case, now with camelCase support too.
+
+> **"Naming is the starting point of programming, and good names lead to good programs."**
 
 ---
 
-## Why "kebab"?
+## Core Concept
 
-**kebab-case** is a standard naming convention in programming that looks like this:
-
-```
-my-file-name
-```
-
-Why is it called kebab (shish kebab)? Because words are strung together with hyphens `-`, looking like pieces of meat on a skewer:
+**kebab-case** is a standard naming convention in programming. Words are strung together with hyphens `-`, looking like pieces of meat on a skewer:
 
 ```
   my - file - name
@@ -22,64 +22,88 @@ Why is it called kebab (shish kebab)? Because words are strung together with hyp
   ---------------  <- skewer
 ```
 
-### The Programming Naming Zoo
-
-| Naming Style | Example | Looks Like |
-|--------------|---------|------------|
-| **kebab-case** | `my-file-name` | Shish kebab |
-| **snake_case** | `my_file_name` | Snake (underscores lie flat like a snake) |
-| **camelCase** | `myFileName` | Camel (uppercase letters form humps) |
-| **PascalCase** | `MyFileName` | Big Camel (first letter also capitalized) |
-
-### Why Use kebab-case?
-
-- **URL friendly**: Browsers don't encode `-`, so `my-file` looks better than `my%20file`
-- **High readability**: `my-long-file-name` is much clearer than `mylongfilename`
-- **Industry convention**: CSS classes, HTML attributes, and CLI parameters all use this style
+This CLI tool lets you batch-convert all filenames in a folder with one command, supporting preview mode (default), recursive processing, extension filtering, and a Think Hard mode with backup and rollback features.
 
 ---
 
 ## Features
 
-- **Smart conversion**: Automatically handles CamelCase, snake_case, spaces, and special characters
-- **Custom style**: Choose between kebab-case or camelCase output
-- **Preview first**: Default mode shows what will change without executing
-- **Safety mechanisms**: Automatically skips `.git`, `node_modules`, and other sensitive directories
-- **Conflict handling**: Automatically adds numeric suffixes when filenames collide
-- **Preserves Chinese**: Chinese filenames remain unchanged
-- **Think Hard mode**: `kebab-rename-safe` provides detailed analysis, backup, and rollback features
+| Feature | Description |
+|---------|-------------|
+| **Smart Conversion** | Automatically handles CamelCase, snake_case, spaces, and special characters |
+| **Custom Style** | Choose between kebab-case or camelCase output |
+| **Preview First** | Default mode shows what will change without executing |
+| **Safety Mechanisms** | Automatically skips `.git`, `node_modules`, and other sensitive directories |
+| **Conflict Handling** | Automatically adds numeric suffixes when filenames collide |
+| **Preserves Chinese** | Chinese filenames remain unchanged |
+| **Think Hard Mode** | `kebab-rename-safe` provides detailed analysis, backup, and rollback |
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph CLI["Command Line Interface"]
+        BIN1["kebab-rename"]
+        BIN2["kebab-rename-safe"]
+    end
+
+    subgraph Core["Core Modules"]
+        INDEX["src/index.js<br/>Main Entry"]
+        CONVERTER["src/converter.js<br/>Conversion Logic"]
+    end
+
+    subgraph FS["File System"]
+        SCAN["Directory Scan"]
+        RENAME["Rename"]
+        HISTORY["History"]
+    end
+
+    BIN1 --> INDEX
+    BIN2 --> INDEX
+    INDEX --> CONVERTER
+    CONVERTER --> SCAN
+    CONVERTER --> RENAME
+    BIN2 --> HISTORY
+```
+
+---
+
+## Tech Stack
+
+| Technology | Purpose | Notes |
+|------------|---------|-------|
+| Node.js | Runtime | v18+ |
+| JavaScript ES6+ | Main Language | ESM Modules |
+| Commander.js | CLI Argument Parsing | v12+ |
+| Node Test Runner | Unit Testing | Built-in Test Framework |
 
 ---
 
 ## Quick Start
 
-No installation needed, just one command:
+### Prerequisites
+
+- Node.js 18+
+
+### Usage
 
 ```bash
+# No installation needed, just one command
 npx kebab-rename ./your-folder
+
+# Actually execute the rename
+npx kebab-rename ./your-folder --yes
+
+# Recursively process subdirectories
+npx kebab-rename ./my-folder -r -y
+
+# Think Hard mode (safer)
+npx kebab-rename-safe ./my-folder -r
 ```
 
-### Want extra safety? Use Think Hard mode
-
-```bash
-npx kebab-rename-safe ./your-folder -r
-```
-
-Provides detailed statistics, automatic backup, double confirmation, and rollback anytime!
-
----
-
-## Installation
-
-### Method 1: Run directly with npx (Recommended)
-
-No installation required:
-
-```bash
-npx kebab-rename ./my-folder
-```
-
-### Method 2: Global installation
+### Global Installation
 
 ```bash
 npm install -g kebab-rename
@@ -88,56 +112,22 @@ kebab-rename ./my-folder
 
 ---
 
-## Usage Examples
-
-### Demo Output
+## Project Structure
 
 ```
-$ npx kebab-rename /tmp/my-folder
-
-Scanning...
-
-/tmp/my-folder
-
-  CamelCaseFile.ts    ->  camel-case-file.ts
-  IMPORTANT_FILE.md   ->  important-file.md
-  My Document.txt     ->  my-document.txt
-  Photo (1).jpg       ->  photo-1.jpg
-  snake_case_name.py  ->  snake-case-name.py
-
-Found 5 items to rename.
-
-This is preview mode. Add --yes or -y to actually execute the rename.
-```
-
-### Common Use Cases
-
-#### "I just want to see what will change"
-
-```bash
-npx kebab-rename ./my-folder
-```
-
-Default is preview mode, safe to run.
-
-#### "I'm ready to rename!"
-
-```bash
-npx kebab-rename ./my-folder --yes
-# or shorthand
-npx kebab-rename ./my-folder -y
-```
-
-#### "Process subdirectories too"
-
-```bash
-npx kebab-rename ./my-folder -r -y
-```
-
-#### "Only rename image files"
-
-```bash
-npx kebab-rename ./my-folder --ext .jpg,.png -y
+day-02-kebab-rename/
+├── bin/
+│   ├── kebab-rename.js      # Standard CLI entry
+│   └── kebab-rename-safe    # Think Hard mode entry
+├── src/
+│   ├── index.js             # Core logic
+│   └── converter.js         # Conversion rules
+├── test/
+│   └── cli.test.js          # Unit tests
+├── .kebab-rename-history/   # Operation history (auto-generated)
+├── package.json
+├── README.md
+└── README_EN.md
 ```
 
 ---
@@ -158,6 +148,8 @@ npx kebab-rename ./my-folder --ext .jpg,.png -y
 
 ## CLI Options
 
+### kebab-rename
+
 | Option | Description |
 |--------|-------------|
 | `-y, --yes` | Actually execute the rename (without it, preview only) |
@@ -168,99 +160,7 @@ npx kebab-rename ./my-folder --ext .jpg,.png -y
 | `-h, --help` | Show help |
 | `-V, --version` | Show version |
 
----
-
-## Safety Mechanisms
-
-- **Default preview**: Files are never touched without `--yes`
-- **Skip hidden files**: Files starting with `.` are not processed
-- **Skip sensitive directories**: `node_modules`, `.git`, `dist`, `build`, etc.
-- **Conflict protection**: Automatically adds numeric suffix when target filename exists
-
----
-
-## Think Hard Mode: kebab-rename-safe
-
-When you need to **execute batch renaming more carefully**, use `kebab-rename-safe`:
-
-```
-+======================================+
-|     Think Hard Before Rename         |
-+======================================+
-```
-
-### Features
-
-| Feature | Description |
-|---------|-------------|
-| **Detailed statistics** | Shows file/directory counts, extension distribution |
-| **Auto backup** | Records complete path mapping before execution |
-| **Double confirmation** | Requires typing `yes` to execute, prevents accidents |
-| **Rollback** | `--undo` can restore the last operation |
-
-### Usage
-
-#### Preview and confirm
-
-```bash
-kebab-rename-safe ./my-folder -r
-```
-
-Example output:
-
-```
-Scanning...
-  MyTestFile.txt     ->  my-test-file.txt
-  SomeComponent.tsx  ->  some-component.tsx
-  MyFolder           ->  my-folder
-
-=== Think Hard: Detailed Analysis ===
-
-Change Statistics:
-   Directories: 1
-   Files: 2
-   Total: 3 items
-
-Extension Distribution:
-   .txt: 1
-   .tsx: 1
-
-Target Style: kebab-case
-
-Creating backup record...
-   Saved to: .kebab-rename-history/2025-12-04_12-00-00.json
-
-About to rename 3 items
-
-Type 'yes' to confirm, or press Enter to cancel:
->
-```
-
-#### Use camelCase style
-
-```bash
-kebab-rename-safe ./my-folder -r -s camel
-```
-
-#### Skip confirmation (still creates backup)
-
-```bash
-kebab-rename-safe ./my-folder -r -f
-```
-
-#### Rollback last operation
-
-```bash
-kebab-rename-safe --undo
-```
-
-#### View operation history
-
-```bash
-kebab-rename-safe --history
-```
-
-### CLI Options (kebab-rename-safe)
+### kebab-rename-safe (Think Hard Mode)
 
 | Option | Description |
 |--------|-------------|
@@ -272,21 +172,58 @@ kebab-rename-safe --history
 | `--history` | Show operation history |
 | `-h, --help` | Show help |
 
-### Backup and Rollback Mechanism
+---
 
-- Backups are stored in the `.kebab-rename-history/` directory
-- Each execution creates a JSON file recording complete path mappings
-- Rollback restores files in depth order to ensure subdirectory files are correctly restored
-- History is automatically cleared after successful rollback
+## Safety Mechanisms
+
+| Mechanism | Description |
+|-----------|-------------|
+| **Default Preview** | Files are never touched without `--yes` |
+| **Skip Hidden Files** | Files starting with `.` are not processed |
+| **Skip Sensitive Directories** | `node_modules`, `.git`, `dist`, `build`, etc. |
+| **Conflict Protection** | Automatically adds numeric suffix when target filename exists |
+| **Auto Backup** | Think Hard mode records complete path mapping before execution |
+| **Rollback** | `--undo` can restore the last operation |
+
+---
+
+## Reflections
+
+### The Programming Naming Zoo
+
+| Naming Style | Example | Looks Like |
+|--------------|---------|------------|
+| **kebab-case** | `my-file-name` | Shish kebab |
+| **snake_case** | `my_file_name` | Snake (underscores lie flat like a snake) |
+| **camelCase** | `myFileName` | Camel (uppercase letters form humps) |
+| **PascalCase** | `MyFileName` | Big Camel (first letter also capitalized) |
+
+### Why Use kebab-case?
+
+- **URL Friendly**: Browsers don't encode `-`, so `my-file` looks better than `my%20file`
+- **High Readability**: `my-long-file-name` is much clearer than `mylongfilename`
+- **Industry Convention**: CSS classes, HTML attributes, and CLI parameters all use this style
 
 ---
 
 ## License
 
-[MIT](LICENSE)
+This project is licensed under [MIT](LICENSE).
 
 ---
 
 ## Author
 
-Tzu-Chao - [tznthou@gmail.com](mailto:tznthou@gmail.com)
+Tznthou - [tznthou@gmail.com](mailto:tznthou@gmail.com)
+
+---
+
+## Related Projects
+
+This is Day 2 of the 32-day consecutive project challenge. For the complete project list:
+
+- [Muripo HQ](https://tznthou.github.io/muripo-hq/) - Project Headquarters
+
+---
+
+> **"Naming is the starting point of programming, and good names lead to good programs."**

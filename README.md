@@ -1,20 +1,20 @@
-# Kebab Rename 一鍵把檔名轉成
+# Kebab Rename 檔名轉換器
 
-> 一鍵把檔名轉成 kebab-case 🍢，現在也支援 camelCase 🐫
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E.svg)](https://developer.mozilla.org/docs/Web/JavaScript)
 
 [← 回到 Muripo HQ](https://tznthou.github.io/muripo-hq/) | [English](README_EN.md)
 
+一鍵把檔名轉成 kebab-case，現在也支援 camelCase。
+
+> **"命名是程式的起點，好名字是好程式的開始。"**
+
 ---
 
-## 為什麼叫 kebab？
+## 核心概念
 
-**kebab-case** 是程式界的標準命名風格，長這樣：
-
-```
-my-file-name
-```
-
-為什麼叫 kebab（烤肉串）？因為單字用連字號 `-` 串起來，看起來就像烤肉串上一塊塊的肉：
+**kebab-case** 是程式界的標準命名風格，單字用連字號 `-` 串起來，看起來就像烤肉串上一塊塊的肉：
 
 ```
   my - file - name
@@ -22,64 +22,88 @@ my-file-name
   ───────────────  ← 竹籤
 ```
 
-### 程式界的命名動物園
-
-| 命名風格 | 範例 | 長這樣 |
-|----------|------|--------|
-| **kebab-case** | `my-file-name` | 烤肉串 🍢 |
-| **snake_case** | `my_file_name` | 蛇 🐍（底線趴地上像蛇） |
-| **camelCase** | `myFileName` | 駱駝 🐫（大小寫起伏像駝峰） |
-| **PascalCase** | `MyFileName` | 大駱駝（首字母也大寫） |
-
-### 為什麼要用 kebab-case？
-
-- **URL 友善**：瀏覽器不會對 `-` 做編碼，`my-file` 比 `my%20file` 好看
-- **易讀性高**：`my-long-file-name` 比 `mylongfilename` 清楚多了
-- **業界慣例**：CSS class、HTML 屬性、CLI 參數都用這個風格
+這個 CLI 工具讓你一鍵批量轉換資料夾內的所有檔案名稱，支援預覽模式（預設）、遞迴處理、副檔名篩選，還有 Think Hard 模式提供備份與回滾功能。
 
 ---
 
 ## 功能特色
 
-- 🔄 **智慧轉換**：自動處理 CamelCase、snake_case、空格、特殊符號
-- 🔀 **客製風格**：可選擇輸出 kebab-case 或 camelCase
-- 👀 **預覽優先**：預設只顯示會改什麼，不實際執行
-- 🛡️ **安全機制**：自動跳過 `.git`、`node_modules` 等敏感目錄
-- 🔢 **衝突處理**：檔名重複時自動加數字後綴
-- 🌏 **保留中文**：中文檔名維持原樣不動
-- 🧠 **Think Hard 模式**：`kebab-rename-safe` 提供詳細分析、備份與回滾功能
+| 功能 | 說明 |
+|------|------|
+| **智慧轉換** | 自動處理 CamelCase、snake_case、空格、特殊符號 |
+| **客製風格** | 可選擇輸出 kebab-case 或 camelCase |
+| **預覽優先** | 預設只顯示會改什麼，不實際執行 |
+| **安全機制** | 自動跳過 `.git`、`node_modules` 等敏感目錄 |
+| **衝突處理** | 檔名重複時自動加數字後綴 |
+| **保留中文** | 中文檔名維持原樣不動 |
+| **Think Hard 模式** | `kebab-rename-safe` 提供詳細分析、備份與回滾 |
 
 ---
 
-## Quick Start
+## 系統架構
 
-不用安裝，一行搞定：
+```mermaid
+flowchart TB
+    subgraph CLI["命令列介面"]
+        BIN1["kebab-rename"]
+        BIN2["kebab-rename-safe"]
+    end
+
+    subgraph Core["核心模組"]
+        INDEX["src/index.js<br/>主入口"]
+        CONVERTER["src/converter.js<br/>轉換邏輯"]
+    end
+
+    subgraph FS["檔案系統"]
+        SCAN["目錄掃描"]
+        RENAME["重新命名"]
+        HISTORY["歷史記錄"]
+    end
+
+    BIN1 --> INDEX
+    BIN2 --> INDEX
+    INDEX --> CONVERTER
+    CONVERTER --> SCAN
+    CONVERTER --> RENAME
+    BIN2 --> HISTORY
+```
+
+---
+
+## 技術棧
+
+| 技術 | 用途 | 備註 |
+|------|------|------|
+| Node.js | 執行環境 | v18+ |
+| JavaScript ES6+ | 主要語言 | ESM 模組 |
+| Commander.js | CLI 參數解析 | v12+ |
+| Node Test Runner | 單元測試 | 內建測試框架 |
+
+---
+
+## 快速開始
+
+### 環境需求
+
+- Node.js 18+
+
+### 使用方式
 
 ```bash
+# 不用安裝，一行搞定
 npx kebab-rename ./your-folder
+
+# 實際執行重新命名
+npx kebab-rename ./your-folder --yes
+
+# 遞迴處理子目錄
+npx kebab-rename ./my-folder -r -y
+
+# Think Hard 模式（更安全）
+npx kebab-rename-safe ./my-folder -r
 ```
 
-### 想要更安全？用 Think Hard 模式
-
-```bash
-npx kebab-rename-safe ./your-folder -r
-```
-
-提供詳細統計、自動備份、二次確認，還能隨時回滾！
-
----
-
-## 安裝方式
-
-### 方法 1：用 npx 直接跑（推薦）
-
-不需安裝，隨用隨跑：
-
-```bash
-npx kebab-rename ./my-folder
-```
-
-### 方法 2：全域安裝
+### 全域安裝
 
 ```bash
 npm install -g kebab-rename
@@ -88,56 +112,22 @@ kebab-rename ./my-folder
 
 ---
 
-## 使用範例
-
-### Demo 輸出
+## 專案結構
 
 ```
-$ npx kebab-rename /tmp/my-folder
-
-🔍 掃描中...
-
-📁 /tmp/my-folder
-
-  📄 CamelCaseFile.ts    →  camel-case-file.ts
-  📄 IMPORTANT_FILE.md   →  important-file.md
-  📄 My Document.txt     →  my-document.txt
-  📄 Photo (1).jpg       →  photo-1.jpg
-  📄 snake_case_name.py  →  snake-case-name.py
-
-找到 5 個需要重新命名的項目。
-
-💡 這是預覽模式。加上 --yes 或 -y 來實際執行重新命名。
-```
-
-### 常見使用情境
-
-#### 「我只想看看會改什麼」
-
-```bash
-npx kebab-rename ./my-folder
-```
-
-預設就是預覽模式，放心跑。
-
-#### 「我確定要改了！」
-
-```bash
-npx kebab-rename ./my-folder --yes
-# 或簡寫
-npx kebab-rename ./my-folder -y
-```
-
-#### 「連子目錄一起處理」
-
-```bash
-npx kebab-rename ./my-folder -r -y
-```
-
-#### 「只想改圖片檔」
-
-```bash
-npx kebab-rename ./my-folder --ext .jpg,.png -y
+day-02-kebab-rename/
+├── bin/
+│   ├── kebab-rename.js      # 標準 CLI 入口
+│   └── kebab-rename-safe    # Think Hard 模式入口
+├── src/
+│   ├── index.js             # 核心邏輯
+│   └── converter.js         # 轉換規則
+├── test/
+│   └── cli.test.js          # 單元測試
+├── .kebab-rename-history/   # 操作歷史（自動生成）
+├── package.json
+├── README.md
+└── README_EN.md
 ```
 
 ---
@@ -158,6 +148,8 @@ npx kebab-rename ./my-folder --ext .jpg,.png -y
 
 ## CLI 選項
 
+### kebab-rename
+
 | 選項 | 說明 |
 |------|------|
 | `-y, --yes` | 實際執行重新命名（不加就是預覽模式） |
@@ -168,99 +160,7 @@ npx kebab-rename ./my-folder --ext .jpg,.png -y
 | `-h, --help` | 顯示說明 |
 | `-V, --version` | 顯示版本 |
 
----
-
-## 安全機制
-
-- ✅ **預設預覽**：不加 `--yes` 絕對不會動到檔案
-- ✅ **跳過隱藏檔**：`.` 開頭的檔案不處理
-- ✅ **跳過敏感目錄**：`node_modules`、`.git`、`dist`、`build` 等
-- ✅ **衝突保護**：目標檔名已存在時自動加數字後綴
-
----
-
-## Think Hard 模式：kebab-rename-safe
-
-當你需要**更謹慎地執行**批次重命名時，使用 `kebab-rename-safe`：
-
-```
-╔══════════════════════════════════════╗
-║     🧠 Think Hard Before Rename      ║
-╚══════════════════════════════════════╝
-```
-
-### 功能特色
-
-| 功能 | 說明 |
-|------|------|
-| 📊 **詳細統計** | 顯示檔案/目錄數量、副檔名分佈 |
-| 💾 **自動備份** | 執行前記錄完整路徑對照表 |
-| ⚠️ **二次確認** | 需輸入 `yes` 才執行，防止手滑 |
-| ↩️ **回滾功能** | `--undo` 可還原上次操作 |
-
-### 使用方式
-
-#### 預覽並確認
-
-```bash
-kebab-rename-safe ./my-folder -r
-```
-
-輸出範例：
-
-```
-🔍 掃描中...
-  📄 MyTestFile.txt     →  my-test-file.txt
-  📄 SomeComponent.tsx  →  some-component.tsx
-  📂 MyFolder           →  my-folder
-
-=== Think Hard: 詳細分析 ===
-
-📊 變更統計：
-   目錄: 1 個
-   檔案: 2 個
-   總計: 3 個項目
-
-📁 副檔名分佈：
-   .txt: 1
-   .tsx: 1
-
-🎨 目標風格： kebab-case
-
-💾 建立備份記錄...
-   已儲存至: .kebab-rename-history/2025-12-04_12-00-00.json
-
-⚠️  即將重新命名 3 個項目
-
-輸入 'yes' 確認執行，或按 Enter 取消：
->
-```
-
-#### 使用 camelCase 風格
-
-```bash
-kebab-rename-safe ./my-folder -r -s camel
-```
-
-#### 跳過確認（仍會備份）
-
-```bash
-kebab-rename-safe ./my-folder -r -f
-```
-
-#### 回滾上次操作
-
-```bash
-kebab-rename-safe --undo
-```
-
-#### 查看操作歷史
-
-```bash
-kebab-rename-safe --history
-```
-
-### CLI 選項（kebab-rename-safe）
+### kebab-rename-safe（Think Hard 模式）
 
 | 選項 | 說明 |
 |------|------|
@@ -272,21 +172,58 @@ kebab-rename-safe --history
 | `--history` | 顯示操作歷史 |
 | `-h, --help` | 顯示說明 |
 
-### 備份與回滾機制
+---
 
-- 備份儲存於 `.kebab-rename-history/` 目錄
-- 每次執行都會建立一個 JSON 檔案，記錄完整路徑對照
-- 回滾時會依照深度順序還原，確保子目錄內的檔案正確還原
-- 回滾完成後自動清除該次歷史記錄
+## 安全機制
+
+| 機制 | 說明 |
+|------|------|
+| **預設預覽** | 不加 `--yes` 絕對不會動到檔案 |
+| **跳過隱藏檔** | `.` 開頭的檔案不處理 |
+| **跳過敏感目錄** | `node_modules`、`.git`、`dist`、`build` 等 |
+| **衝突保護** | 目標檔名已存在時自動加數字後綴 |
+| **自動備份** | Think Hard 模式執行前記錄完整路徑對照表 |
+| **回滾功能** | `--undo` 可還原上次操作 |
 
 ---
 
-## License
+## 隨想
 
-[MIT](LICENSE)
+### 程式界的命名動物園
+
+| 命名風格 | 範例 | 長這樣 |
+|----------|------|--------|
+| **kebab-case** | `my-file-name` | 烤肉串 🍢 |
+| **snake_case** | `my_file_name` | 蛇 🐍（底線趴地上像蛇） |
+| **camelCase** | `myFileName` | 駱駝 🐫（大小寫起伏像駝峰） |
+| **PascalCase** | `MyFileName` | 大駱駝（首字母也大寫） |
+
+### 為什麼要用 kebab-case？
+
+- **URL 友善**：瀏覽器不會對 `-` 做編碼，`my-file` 比 `my%20file` 好看
+- **易讀性高**：`my-long-file-name` 比 `mylongfilename` 清楚多了
+- **業界慣例**：CSS class、HTML 屬性、CLI 參數都用這個風格
+
+---
+
+## 授權
+
+本專案採用 [MIT](LICENSE) 授權。
 
 ---
 
 ## 作者
 
 子超 - [tznthou@gmail.com](mailto:tznthou@gmail.com)
+
+---
+
+## 相關專案
+
+這是 32 天連續專案挑戰的第 2 天作品。完整專案列表請參考：
+
+- [Muripo HQ](https://tznthou.github.io/muripo-hq/) - 專案總部
+
+---
+
+> **"命名是程式的起點，好名字是好程式的開始。"**
